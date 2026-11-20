@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Naing's Arcade</title>
+<style>
+  html,body{margin:0;min-height:100%;background:#0f0c29;color:#fff;font-family:'Courier New',monospace;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  h1{color:#00ffd5;letter-spacing:3px;margin:12px 0 8px;font-size:clamp(18px,4vw,30px);text-shadow:0 0 10px #00ffd5}
+  nav{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+  button{font:bold 14px 'Courier New',monospace;background:#14102e;color:#fff;border:2px solid #ff3cac;border-radius:6px;padding:8px 14px;cursor:pointer}
+  button.on{background:#ff3cac;color:#0f0c29}
+  canvas{width:min(94vw,800px);height:auto;border:3px solid #ff3cac;border-radius:10px;touch-action:none;background:#14102e}
+  p{color:#ffe600;margin:10px;font-size:14px;text-align:center}
+</style>
+</head>
+<body>
+<h1>NAING'S ARCADE</h1>
+<nav id="nav"></nav>
+<canvas id="c" width="800" height="400"></canvas>
+<p id="help"></p>
+<script>
+const cv=document.getElementById('c'),x=cv.getContext('2d'),W=800,H=400;
+const hiGet=k=>{try{return +localStorage.getItem('hi_'+k)||0}catch(e){return 0}};
+const hiSet=(k,v)=>{try{localStorage.setItem('hi_'+k,v)}catch(e){}};
+const txt=(s,px,py,sz,col,al)=>{x.font='bold '+sz+'px Courier New';x.fillStyle=col;x.textAlign=al||'center';x.fillText(s,px,py)};
+const overlay=(t,sub,col)=>{x.fillStyle='rgba(0,0,0,.6)';x.fillRect(0,0,W,H);txt(t,W/2,175,42,col||'#ff5c5c');txt(sub,W/2,220,18,'#fff')};
+const hud=(l,r)=>{txt(l,16,26,16,'#fff','left');txt(r,W-16,26,16,'#00ffd5','right')};
+const keys={};
+const blink=()=>Math.floor(Date.now()/500)%2;
+
+/* ---------- SNAKE ---------- */
+const snake={help:'ARROWS / WASD / SWIPE to steer. Eat the pink food, avoid walls and yourself.',
+init(){this.b=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];this.d=this.nd={x:1,y:0};this.sc=0;this.over=false;this.run=false;this.n=0;this.food=this.rf();this.hi=hiGet('snake')},
+rf(){let p;do{p={x:Math.random()*40|0,y:Math.random()*20|0}}while(this.b.some(s=>s.x==p.x&&s.y==p.y));return p},
+dir(dx,dy){if(dx==-this.d.x&&dy==-this.d.y)return;this.nd={x:dx,y:dy};this.run=true},
+key(c){const m={ArrowUp:[0,-1],KeyW:[0,-1],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0],ArrowRight:[1,0],KeyD:[1,0]};
+  if(this.over){if(c=='Space'||m[c])this.init();return}
+  if(m[c])this.dir(...m[c]);else if(c=='Space')this.run=true},
+tap(){if(this.over)this.init();else this.run=true},
+swipe(dx,dy){if(this.over)return;Math.abs(dx)>Math.abs(dy)?this.dir(Math.sign(dx),0):this.dir(0,Math.sign(dy))},
+step(){if(!this.run||this.over)return;if(++this.n<Math.max(3,8-(this.sc/60|0)))return;this.n=0;this.d=this.nd;
+  const h={x:this.b[0].x+this.d.x,y:this.b[0].y+this.d.y};
+  if(h.x<0||h.y<0||h.x>=40||h.y>=20||this.b.some(s=>s.x==h.x&&s.y==h.y)){this.over=true;if(this.sc>this.hi){this.hi=this.sc;hiSet('snake',this.sc)}return}
+  this.b.unshift(h);if(h.x==this.food.x&&h.y==this.food.y){this.sc+=10;this.food=this.rf()}else this.b.pop()},
+draw(){x.fillStyle='#14102e';x.fillRect(0,0,W,H);x.fillStyle='#1d1844';
+  for(let i=0;i<40;i++)for(let j=0;j<20;j++)if((i+j)%2)x.fillRect(i*20,j*20,20,20);
+  x.fillStyle='#ff3cac';const p=Math.sin(Date.now()/150)*2;x.fillRect(this.food.x*20+2-p,this.food.y*20+2-p,16+2*p,16+2*p);
+  this.b.forEach((s,i)=>{x.fillStyle=i?'#00ffd5':'#ffe600';x.fillRect(s.x*20+1,s.y*20+1,18,18)});
+  hud('SCORE '+this.sc,'HI '+this.hi);
+  if(!this.run)txt(blink()?'PRESS ARROW KEY / SWIPE TO START':'',W/2,200,20,'#fff');
+  if(this.over)overlay('GAME OVER','Score '+this.sc+'  |  SPACE / TAP to retry')}};
+
+/* ---------- COIN RUNNER ---------- */
+const GR=340;
+const runner={help:'SPACE / UP / TAP to jump. Collect coins, dodge the green blocks.',
+init(){this.y=GR-54;this.vy=0;this.on=true;this.o=[];this.c=[];this.spd=5;this.sc=0;this.cg=0;this.over=false;this.run=false;this.nx=60;this.f=0;this.hi=hiGet('runner')},
+jump(){if(this.over){this.init();this.run=true;return}this.run=true;if(this.on){this.vy=-15;this.on=false}},
+key(c){if(['Space','ArrowUp','KeyW'].includes(c))this.jump()},tap(){this.jump()},
+step(){this.f++;if(!this.run||this.over)return;this.sc+=this.spd/20;this.spd=Math.min(13,5+this.sc/150);
+  this.vy+=.8;this.y+=this.vy;if(this.y>=GR-54){this.y=GR-54;this.vy=0;this.on=true}
+  if(--this.nx<=0){this.o.push({x:W+20,w:24+Math.random()*18,h:24+Math.random()*30});
+    if(Math.random()<.7)this.c.push({x:W+110+Math.random()*60,y:GR-75-Math.random()*80});
+    this.nx=Math.max(38,85-this.spd*3)+Math.random()*40}
+  this.o.forEach(o=>o.x-=this.spd);this.c.forEach(c=>c.x-=this.spd);
+  this.o=this.o.filter(o=>o.x>-60);this.c=this.c.filter(c=>c.x>-30);
+  const hx=90,hy=this.y+4;
+  for(const o of this.o)if(hx<o.x+o.w&&hx+40>o.x&&hy+50>GR-o.h){this.over=true;if(this.sc>this.hi){this.hi=Math.floor(this.sc);hiSet('runner',this.hi)}}
+  this.c=this.c.filter(c=>{if(hx<c.x+16&&hx+40>c.x&&hy<c.y+20&&hy+50>c.y){this.cg++;this.sc+=25;return false}return true})},
+draw(){const g=x.createLinearGradient(0,0,0,GR);g.addColorStop(0,'#0f0c29');g.addColorStop(.6,'#302b63');g.addColorStop(1,'#ff3cac');
+  x.fillStyle=g;x.fillRect(0,0,W,H);x.fillStyle='#1b1340';x.fillRect(0,GR,W,H-GR);x.fillStyle='#ff3cac';x.fillRect(0,GR,W,3);
+  x.fillStyle='rgba(255,60,172,.4)';for(let i=0;i<14;i++)x.fillRect(((i*70-this.f*this.spd)%W+W)%W,GR+16,30,2);
+  this.o.forEach(o=>{x.fillStyle='#6bd96b';x.fillRect(o.x,GR-o.h,o.w,o.h);x.fillStyle='#2f8f2f';x.fillRect(o.x,GR-o.h,o.w,5)});
+  this.c.forEach(c=>{const w=Math.abs(Math.cos(this.f/8))*14+2;x.fillStyle='#ffe600';x.fillRect(c.x+(16-w)/2,c.y,w,20)});
+  const px=80,py=this.y,o=this.on?(this.f%12<6?6:0):0;
+  x.fillStyle='#ff3c3c';x.fillRect(px+12,py,36,6);x.fillRect(px+6,py+6,48,6);
+  x.fillStyle='#ffcf9f';x.fillRect(px+12,py+12,36,18);x.fillStyle='#222';x.fillRect(px+18,py+18,6,6);x.fillRect(px+36,py+18,6,6);
+  x.fillStyle='#3c7bff';x.fillRect(px+6,py+30,48,12);x.fillRect(px+12,py+42,36,6);
+  x.fillStyle='#5b3a29';x.fillRect(px+12-o,py+48,12,6);x.fillRect(px+36+o,py+48,12,6);
+  hud('SCORE '+Math.floor(this.sc)+'  COINS '+this.cg,'HI '+this.hi);
+  if(!this.run)txt(blink()?'PRESS SPACE / TAP TO START':'',W/2,150,20,'#fff');
+  if(this.over)overlay('GAME OVER','Score '+Math.floor(this.sc)+'  |  SPACE / TAP to retry')}};
+
+/* ---------- BREAKOUT ---------- */
+const COL=['#ff3c3c','#ff9f3c','#ffe600','#6bd96b','#3c9bff'];
+const breakout={help:'MOUSE / TOUCH / LEFT-RIGHT keys move the paddle. SPACE / TAP launches the ball.',
+init(){this.p=350;this.pw=100;this.br=[];for(let r=0;r<5;r++)for(let c=0;c<10;c++)this.br.push({x:20+c*76,y:50+r*26,w:72,h:22,r,a:true});
+  this.bx=400;this.by=350;this.vx=0;this.vy=0;this.lives=3;this.sc=0;this.run=false;this.over=false;this.win=false;this.hi=hiGet('breakout')},
+launch(){if(this.over||this.win){this.init();return}if(!this.run){this.run=true;this.vx=4*(Math.random()<.5?-1:1);this.vy=-5}},
+key(c){if(c=='Space'||c=='ArrowUp')this.launch()},tap(){this.launch()},
+move(mx){this.p=Math.max(0,Math.min(W-this.pw,mx-this.pw/2))},
+step(){if(keys.ArrowLeft)this.p=Math.max(0,this.p-9);if(keys.ArrowRight)this.p=Math.min(W-this.pw,this.p+9);
+  if(this.over||this.win)return;
+  if(!this.run){this.bx=this.p+this.pw/2;this.by=358;return}
+  this.bx+=this.vx;this.by+=this.vy;
+  if(this.bx<7||this.bx>W-7)this.vx=-this.vx;if(this.by<7)this.vy=Math.abs(this.vy);
+  if(this.vy>0&&this.by+7>=370&&this.by<384&&this.bx>this.p-4&&this.bx<this.p+this.pw+4){this.vy=-Math.abs(this.vy);this.vx=(this.bx-(this.p+this.pw/2))/(this.pw/2)*6}
+  for(const b of this.br)if(b.a&&this.bx+7>b.x&&this.bx-7<b.x+b.w&&this.by+7>b.y&&this.by-7<b.y+b.h){b.a=false;this.vy=-this.vy*1.01;this.sc+=10;break}
+  if(this.sc>this.hi){this.hi=this.sc;hiSet('breakout',this.sc)}
+  if(this.by>H){this.lives--;this.run=false;if(this.lives<=0)this.over=true}
+  if(!this.br.some(b=>b.a))this.win=true},
+draw(){x.fillStyle='#14102e';x.fillRect(0,0,W,H);
+  this.br.forEach(b=>{if(b.a){x.fillStyle=COL[b.r];x.fillRect(b.x,b.y,b.w,b.h)}});
+  x.fillStyle='#00ffd5';x.fillRect(this.p,370,this.pw,12);
+  x.fillStyle='#fff';x.beginPath();x.arc(this.bx,this.by,7,0,7);x.fill();
+  hud('SCORE '+this.sc+'  LIVES '+this.lives,'HI '+this.hi);
+  if(!this.run&&!this.over&&!this.win)txt(blink()?'SPACE / TAP TO LAUNCH':'',W/2,250,18,'#ffe600');
+  if(this.over)overlay('GAME OVER','Score '+this.sc+'  |  SPACE / TAP to retry');
+  if(this.win)overlay('YOU WIN!','Score '+this.sc+'  |  SPACE / TAP to play again','#6bd96b')}};
+
+/* ---------- MEMORY MATCH ---------- */
+const FC=['#ff3c3c','#ff9f3c','#ffe600','#6bd96b','#3c9bff','#a06bff','#ff3cac','#00ffd5'];
+const memory={help:'Click / tap cards to flip them. Match all 8 pairs in as few moves as you can.',
+init(){this.f=[...FC.keys(),...FC.keys()].sort(()=>Math.random()-.5);this.open=[];this.done=new Set();this.mv=0;this.t=0;this.hi=hiGet('memory')},
+pos(i){return{x:190+(i%4)*108,y:50+(i/4|0)*84}},
+key(c){if(c=='Space'&&this.done.size==16)this.init()},
+tap(px,py){if(this.done.size==16){this.init();return}if(this.t>0)return;
+  for(let i=0;i<16;i++){const p=this.pos(i);if(px>=p.x&&px<=p.x+96&&py>=p.y&&py<=p.y+72&&!this.open.includes(i)&&!this.done.has(i)){
+    this.open.push(i);if(this.open.length==2){this.mv++;const[a,b]=this.open;
+      if(this.f[a]==this.f[b]){this.done.add(a);this.done.add(b);this.open=[];
+        if(this.done.size==16&&(!this.hi||this.mv<this.hi)){this.hi=this.mv;hiSet('memory',this.mv)}}
+      else this.t=45}break}}},
+step(){if(this.t>0&&--this.t==0)this.open=[]},
+draw(){x.fillStyle='#14102e';x.fillRect(0,0,W,H);
+  for(let i=0;i<16;i++){const p=this.pos(i),up=this.open.includes(i)||this.done.has(i);
+    x.fillStyle=up?FC[this.f[i]]:'#302b63';x.fillRect(p.x,p.y,96,72);
+    x.strokeStyle=this.done.has(i)?'#fff':'#ff3cac';x.lineWidth=3;x.strokeRect(p.x,p.y,96,72);
+    txt(up?String.fromCharCode(65+this.f[i]):'?',p.x+48,p.y+50,36,up?'#0f0c29':'#ff3cac')}
+  hud('MOVES '+this.mv,'BEST '+(this.hi||'-'));
+  if(this.done.size==16)overlay('YOU WIN!','Solved in '+this.mv+' moves  |  TAP to play again','#6bd96b')}};
+
+/* ---------- ENGINE ---------- */
+const games={snake,runner,breakout,memory};
+const names={snake:'SNAKE',runner:'COIN RUNNER',breakout:'BREAKOUT',memory:'MEMORY'};
+let cur;
+const nav=document.getElementById('nav');
+for(const k in games){const b=document.createElement('button');b.textContent=names[k];b.id='b_'+k;b.onclick=()=>pick(k);nav.appendChild(b)}
+function pick(k){if(!games[k])k='snake';cur=games[k];cur.init();history.replaceState(null,'','#'+k);
+  for(const g in games)document.getElementById('b_'+g).classList.toggle('on',g==k);
+  document.getElementById('help').textContent=cur.help}
+addEventListener('keydown',e=>{if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys[e.code]=true;cur.key&&cur.key(e.code)});
+addEventListener('keyup',e=>keys[e.code]=false);
+const pt=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]};
+let st=null;
+cv.addEventListener('pointerdown',e=>{e.preventDefault();st=pt(e);cur.move&&cur.move(st[0]);cur.tap&&cur.tap(...st)});
+cv.addEventListener('pointermove',e=>{cur.move&&cur.move(pt(e)[0])});
+cv.addEventListener('pointerup',e=>{if(!st)return;const p=pt(e),dx=p[0]-st[0],dy=p[1]-st[1];if(Math.hypot(dx,dy)>40&&cur.swipe)cur.swipe(dx,dy);st=null});
+pick(location.hash.slice(1));
+(function loop(){cur.step();cur.draw();requestAnimationFrame(loop)})();
+</script>
+</body>
+</html>
