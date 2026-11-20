@@ -1,1 +1,70 @@
 
+# Generates animated "game plays your contribution graph" SVGs and
+# publishes them to an `output` branch. Runs daily + on demand.
+name: Generate Arcade
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"   # every 12 hours
+  workflow_dispatch:          # lets you press "Run workflow" manually
+  push:
+    branches: [main]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      # 1) SNAKE
+      - name: Snake
+        uses: Platane/snk/svg-only@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            dist/github-snake.svg
+            dist/github-snake-dark.svg?palette=github-dark
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2) PAC-MAN
+      - name: Pac-Man
+        uses: abozanona/pacman-contribution-graph@main
+        with:
+          github_user_name: ${{ github.repository_owner }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 3) EXTRA GAMES (Breakout, Galaga, Minesweeper) via the same tool's CLI.
+      #    continue-on-error so one failing game never breaks the others.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Breakout
+        continue-on-error: true
+        run: npx --yes pacman-contribution-graph --game breakout --username ${{ github.repository_owner }} --platform github --gameTheme github --output dist/breakout.svg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Galaga
+        continue-on-error: true
+        run: npx --yes pacman-contribution-graph --game galaga --username ${{ github.repository_owner }} --platform github --gameTheme github --output dist/galaga.svg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Minesweeper
+        continue-on-error: true
+        run: npx --yes pacman-contribution-graph --game minesweeper --username ${{ github.repository_owner }} --platform github --gameTheme github --output dist/minesweeper.svg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4) PUBLISH everything in dist/ to the `output` branch
+      - name: Publish to output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: output
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
