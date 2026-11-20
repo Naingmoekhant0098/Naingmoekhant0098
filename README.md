@@ -23,6 +23,38 @@
   <img src="assets/skills.svg" alt="Character sheet" width="100%" />
 </p>
 
+## 🐍 Arcade: Games Playing My Contributions
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/github-snake-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/github-snake.svg" />
+    <img alt="Snake eating my contributions" src="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/github-snake-dark.svg" />
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/pacman-contribution-graph-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/pacman-contribution-graph.svg" />
+    <img alt="Pac-Man eating my contributions" src="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/pacman-contribution-graph.svg" />
+  </picture>
+</p>
+
+<p align="center">
+  <img alt="Breakout" src="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/breakout.svg" width="100%" />
+  <img alt="Galaga" src="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/galaga.svg" width="100%" />
+  <img alt="Minesweeper" src="https://raw.githubusercontent.com/Naingmoekhant0098/Naingmoekhant0098/output/minesweeper.svg" width="100%" />
+</p>
+
+## 🕹️ Play My Game
+
+<p align="center">
+  <a href="https://Naingmoekhant0098.github.io/coin-runner/">
+    <img src="https://img.shields.io/badge/%E2%96%B6%20PLAY%20COIN%20RUNNER-ff3cac?style=for-the-badge&labelColor=14102e" alt="Play Coin Runner" />
+  </a>
+</p>
+
 ## 🎒 Inventory
 
 <p align="center">
